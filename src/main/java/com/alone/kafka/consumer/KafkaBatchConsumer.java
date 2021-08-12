@@ -2,6 +2,8 @@ package com.alone.kafka.consumer;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,18 +17,22 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 /**
  * @author Administrator
  */
-public class KafkaConsumerTest {
+public class KafkaBatchConsumer {
 
 
     private static Properties properties = null;
     // private static String group = "mysql_offset";
 //    private static String group = "alarm_test";
-    private static String group = "test_second_group";
+    private static String group = "kafka-dop-group-first";
 //    private static String topic = "first";
-    private static String topic = "test_second";
+    private static String topic = "province-share-heb-wuxian234g-dop";
+//    private static String topic = "test_second";
+//    private static String topic = "edgenode_student4";
     private static KafkaConsumer<String, String> consumer;
     private static String ip;
     private static String MAX_POLL;
+    private static DateTimeFormatter dateTimeFormatter=DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static DateTimeFormatter monthFormatter=DateTimeFormatter.ofPattern("yyyy-MM");
 
     static {
         try {
@@ -99,6 +105,7 @@ public class KafkaConsumerTest {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
                             "select sub_topic_partition_offset from offset where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+//                            "select untiloffset from offset_manager where groupid=? and topic=? and partition=?",
                             group,
                             topic,
                             subtopicpartitionid
@@ -135,63 +142,113 @@ public class KafkaConsumerTest {
 
                 System.out.println("|---------------------------------------------------------------\n" +
                         "|group\ttopic\tpartition\toffset\ttimestamp\n" +
-                        "|" + group + "\t" + topic + "\t" + record.partition() + "\t" + record.offset() + "\t" + record.timestamp() + "\n" +
+                        "|" + group + "\t" + topic + "\t" + record.partition() + "\t" + record.offset() + "\t" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(record.timestamp()) + "\n" +
                         "|---------------------------------------------------------------"
                 );
                 System.out.println(record.value());
                 Optional<?> kafkaMessage = Optional.ofNullable(record.value());
-                if (kafkaMessage.isPresent()) {
-                    Object message = record.value();
-                    String topic = record.topic();
-                    long offset = record.offset();
-//                String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
-//                        new Date(System.currentTimeMillis())
-//                );
-//                offsetMapper.update("test-group", topic, record.partition(), offset, date);
-                    System.out.println("offset:=========================================" + offset);
-                    System.out.println("接收到消息：" + message);
-                    System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-                    String s = message.toString().replaceAll("<AlarmStart>", "").replaceAll("<AlarmEnd>", "");
-//                System.out.println("new====="+s);
-                    String[] a = s.split("\\n\\t");
-                    Map<String, Object> map = new HashMap<>();
-                    for (String ss : a) {
-//                    System.out.println("--------------");``
-//                    System.out.println(ss);
-                        String s1 = ss.replaceAll("\\n", "");
-//                    System.out.println("+++++++++++++++++++++++");
-//                    System.out.println(s1);
-                        String[] split = s1.split(":");
-                        if (split.length < 2) {
-//                        System.out.println(split.length);
-                            map.put(split[0], "" + "offset" + record.offset());
-                            continue;
-                        }
-//                    System.out.println(split.length);
-                        map.put(split[0], split[1] + "offset" + record.offset());
-                    }
-                    dataList.add(map);
-//                    AlarmMessage alarmMessage = (AlarmMessage) MapUtils.mapToObject(map, AlarmMessage.class);
-//                    list.add(alarmMessage);
-//                System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-//                System.out.println(alarmMessage);
-                }
+//                if (kafkaMessage.isPresent()) {
+//                    Object message = record.value();
+//                    String topic = record.topic();
+//                    long offset = record.offset();
+////                String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
+////                        new Date(System.currentTimeMillis())
+////                );
+////                offsetMapper.update("test-group", topic, record.partition(), offset, date);
+//                    System.out.println("offset:=========================================" + offset);
+//                    System.out.println("接收到消息：" + message);
+//                    System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+//                    String s = message.toString().replaceAll("<AlarmStart>", "").replaceAll("<AlarmEnd>", "");
+////                System.out.println("new====="+s);
+//                    String[] a = s.split("\\n\\t");
+//                    Map<String, Object> map = new HashMap<>();
+//                    for (String ss : a) {
+////                    System.out.println("--------------");``
+////                    System.out.println(ss);
+//                        String s1 = ss.replaceAll("\\n", "");
+////                    System.out.println("+++++++++++++++++++++++");
+////                    System.out.println(s1);
+//                        String[] split = s1.split(":");
+//                        if (split.length < 2) {
+////                        System.out.println(split.length);
+//                            map.put(split[0], "" + "offset" + record.offset());
+//                            continue;
+//                        }
+////                    System.out.println(split.length);
+//                        map.put(split[0], split[1] + "offset" + record.offset());
+//                        //手动记录日期
+//                        LocalDate localDate=LocalDate.now();
+//                        map.put("dt_day",dateTimeFormatter.format(localDate));
+//                        map.put("dt_month",monthFormatter.format(localDate));
+//                    }
+//                    dataList.add(map);
+////                    AlarmMessage alarmMessage = (AlarmMessage) MapUtils.mapToObject(map, AlarmMessage.class);
+////                    list.add(alarmMessage);
+////                System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+////                System.out.println(alarmMessage);
+//                }
 
             }
             List<String> cols = new ArrayList<>();
             cols.add("IntVersion");
             cols.add("MsgSerial");
             cols.add("AlarmUniqueId");
+
             cols.add("ClearId");
             cols.add("NeId");
-            DBUtils.insertAllByList("alarm_message", dataList, cols);
+//            cols.add("NeName");
+//            cols.add("NeAlias");
+//            cols.add("NeIp");
+//            cols.add("SystemName");
+//            cols.add("EquipmentClass");
+//            cols.add("Vendor");
+//            cols.add("Version");
+//            cols.add("LocateNeName");
+//            cols.add("LocateNeType");
+//            cols.add("LocateNeStatus");
+//            cols.add("LocateNeSubStatus");
+//            cols.add("LocateInfo");
+//            cols.add("EventTime");
+//            cols.add("CancelTime");
+//            cols.add("DalTime");
+//            cols.add("VendorAlarmType");
+//            cols.add("VendorSeverity");
+//            cols.add("AlarmSeverity");
+//            cols.add("VendorAlarmId");
+//            cols.add("NmsAlarmId");
+//            cols.add("AlarmStatus");
+//            cols.add("AckFlag");
+//            cols.add("AckTime");
+//            cols.add("AckUser");
+//            cols.add("AlarmTitle");
+//            cols.add("StandardAlarmName");
+//            cols.add("ProbableCauseTxt");
+//            cols.add("Specialty");
+//            cols.add("AlarmLogicClass");
+//            cols.add("AlarmLogicSubClass");
+//            cols.add("EffectOnEquipment");
+//            cols.add("EffectOnBusiness");
+//            cols.add("NmsAlarmType");
+//            cols.add("SendGroupFlag");
+//            cols.add("RelatedFlag");
+//            cols.add("AlarmProvince");
+//            cols.add("AlarmRegion");
+//            cols.add("AlarmCounty");
+//            cols.add("Site");
+//            cols.add("AlarmActCount");
+//            cols.add("CorrelateAlarmFlag");
+//            cols.add("dt_day");
+//            cols.add("dt_month");
+            //******************************update
+//            DBUtils.insertAllByList("alarm_message", dataList, cols);
+            //******************************update
             for (Offset offset : offsets) {
                 DBUtils.update("replace into offset values(?,?,?,?,?)", offset);
             }
             offsets.clear();
 //                consumer.close();
             try {
-                Thread.sleep(5000);
+                Thread.sleep(50000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

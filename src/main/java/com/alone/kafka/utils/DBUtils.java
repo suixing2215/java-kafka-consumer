@@ -115,6 +115,7 @@ public class DBUtils {
     public static long queryOffset(String sql, Object... params) {
         Connection conn = getConn();
         long offset = 0;
+//        String offset = "0";
         PreparedStatement preparedStatement = getPstmt(conn, sql);
         bindParam(preparedStatement, params);
 
@@ -123,6 +124,7 @@ public class DBUtils {
             resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 offset = resultSet.getLong("sub_topic_partition_offset");
+//                offset = resultSet.getString("untiloffset");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -130,7 +132,7 @@ public class DBUtils {
             close(resultSet, preparedStatement, conn);
         }
 
-        return offset;
+        return Long.valueOf(offset);
     }
 
     /**
@@ -154,6 +156,11 @@ public class DBUtils {
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+            try {
+                conn.rollback();
+            } catch (SQLException exception) {
+                exception.printStackTrace();
+            }
         } finally {
             close(null, preparedStatement, conn);
         }
@@ -191,6 +198,7 @@ public class DBUtils {
         try {
             connection=getConn();
             String insertStr = buildInsertString(tableName, cols);
+            System.out.println(insertStr);
             preparedStatement = connection.prepareStatement(insertStr);
             connection.setAutoCommit(false);
 
@@ -212,7 +220,9 @@ public class DBUtils {
             preparedStatement.clearBatch();
             connection.commit();
 
-        } catch (Exception e) {
+        } catch (SQLException e){
+            connection.rollback();
+        }catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");
         } finally {
@@ -230,56 +240,6 @@ public class DBUtils {
 
     }
 
-//    public static void insertByList() throws UnsupportedEncodingException, Exception {
-////1000个一提交
-//        int COMMIT_SIZE = 25000;
-////一共多少个
-//        int COUNT = 100000;
-//
-//        long a = System.currentTimeMillis();
-//        Connection conn = null;
-//
-//        try {
-////            Class.forName("com.mysql.jdbc.Driver");
-////            String url="jdbc:mysql://10.10.3.13/new_lxyy_db?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true";
-////            String user="root";
-////            String password="dsideal";
-//
-////            conn= DriverManager.getConnection(url,user,password);
-//            conn = getConn();
-//            long starTime = System.currentTimeMillis();
-//
-//            conn.setAutoCommit(false);
-//            PreparedStatement pstmt = conn.prepareStatement("load data local infile '' " + "into table loadtest fields terminated by ','");
-//            StringBuilder sb = new StringBuilder();
-//            for (int i = 1; i <= COUNT; i++) {
-//                sb.append(i + "," + i + "abc" + "\n");
-//                if (i % COMMIT_SIZE == 0) {
-//                    InputStream is = new ByteArrayInputStream(sb.toString().getBytes());
-//                    ((com.mysql.jdbc.Statement) pstmt).setLocalInfileInputStream(is);
-//
-//                    pstmt.execute();
-//                    conn.commit();
-//                    sb.setLength(0);
-//                }
-//            }
-//            InputStream is = new ByteArrayInputStream(sb.toString().getBytes());
-//            ((com.mysql.jdbc.Statement) pstmt).setLocalInfileInputStream(is);
-//            pstmt.execute();
-//            conn.commit();
-//
-//            long endTime = System.currentTimeMillis();
-//            System.out.println("program runs " + (endTime - starTime) + "ms");
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        } finally {
-//            close(null, pstmt, conn);
-//        }
-//
-////        //在最好的一行加上:
-////        System.out.println("\r插入数据条数："+COUNT+",提交的阀值："+COMMIT_SIZE+",执行耗时 : "+(System.currentTimeMillis()-a)/1000f+" 秒 ");
-////        renderNull();
-//    }
 
     /**
      * 统一关闭资源
