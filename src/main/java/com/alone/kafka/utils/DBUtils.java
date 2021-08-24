@@ -194,21 +194,33 @@ public class DBUtils {
             throws Exception {
         PreparedStatement preparedStatement = null;
         int c = 0;
-        Connection connection=null;
+        Connection connection = null;
         try {
-            connection=getConn();
+            connection = getConn();
             String insertStr = buildInsertString(tableName, cols);
-            System.out.println(insertStr);
+//            System.out.println(insertStr);
             preparedStatement = connection.prepareStatement(insertStr);
             connection.setAutoCommit(false);
 
-            for (int x = 0; x < dataList.size(); x++) {
-                Map<String, Object> data = dataList.get(x);
+            for (Map<String, Object> data : dataList) {
                 for (int i = 0; i < cols.size(); i++) {
                     Object colValue = data.get(cols.get(i));
-                    colValue = colValue == null ? "" : colValue;
                     try {
-                        preparedStatement.setString(i + 1, String.valueOf(colValue));
+                        //******************************update
+//                        if ("MsgSerial".equals(cols.get(i))
+//                                || "AlarmStatus".equals(cols.get(i))
+//                                || "NmsAlarmType".equals(cols.get(i))) {
+//                            if ("".equals(colValue)) {
+//                                colValue = null;
+//                            }
+//                            preparedStatement.setObject(i + 1, colValue);
+//                        }
+                        //******************************update
+//                        else {
+//                            colValue = colValue == null ? "" : colValue;
+//                            preparedStatement.setString(i + 1, String.valueOf(colValue));
+                            preparedStatement.setObject(i + 1, colValue);
+//                        }
                     } catch (Exception e) {
                         preparedStatement.setTimestamp(i + 1, null);
                     }
@@ -220,9 +232,9 @@ public class DBUtils {
             preparedStatement.clearBatch();
             connection.commit();
 
-        } catch (SQLException e){
+        } catch (SQLException e) {
             connection.rollback();
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");
         } finally {
