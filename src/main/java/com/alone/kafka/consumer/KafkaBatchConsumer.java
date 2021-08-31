@@ -37,8 +37,8 @@ public class KafkaBatchConsumer {
     private static KafkaConsumer<String, String> consumer;
     private static String ip;
     private static String MAX_POLL;
-    private final static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
+    private final static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
     static {
         try {
@@ -169,7 +169,12 @@ public class KafkaBatchConsumer {
                     //过滤message为空值的情况
                     if (isEmpty(message)){
                         System.out.println("????????????????");
-                        System.out.println("接收到的消息有空值！："+message);
+                        System.out.println("|---------------------------------------------------------------\n" +
+                                "|group\ttopic\tpartition\toffset\ttimestamp\n" +
+                                "|" + GROUP + "\t" + TOPIC + "\t" + record.partition() + "\t" + record.offset() + "\t" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(record.timestamp()) + "\n" +
+                                "|---------------------------------------------------------------"
+                        );
+                        System.out.println("接收到的消息有空值！："+message+"前面是空值");
                         System.out.println("????????????????");
                         continue;
                     }
