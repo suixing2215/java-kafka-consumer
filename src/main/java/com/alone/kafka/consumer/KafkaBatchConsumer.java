@@ -39,6 +39,7 @@ public class KafkaBatchConsumer {
     private static String MAX_POLL;
     private final static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
+    private final static DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH");
 
     static {
         try {
@@ -179,6 +180,7 @@ public class KafkaBatchConsumer {
                         continue;
                     }
                     String data = message.toString();
+                    //过滤特殊格式数据
                     if (data.startsWith("\"") || data.endsWith("\"")) {
                         System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$");
                         System.out.println("|---------------------------------------------------------------\n" +
@@ -191,6 +193,7 @@ public class KafkaBatchConsumer {
                         System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$");
                         continue;
                     }
+                    //过滤非json格式
                     if (!isJsonValidate(data)) {
                         System.out.println("<<<<<<<>>>>>>");
                         System.out.println("|---------------------------------------------------------------\n" +
@@ -224,6 +227,7 @@ public class KafkaBatchConsumer {
                         System.out.println("==========================");
                         continue;
                     }
+                    //过滤发生时间为空
                     if (null == (alarmMessage.getEventTime())) {
                         System.out.println("@@@@@@@@@@@@@@@@@@@");
                         System.out.println("|---------------------------------------------------------------\n" +
@@ -236,6 +240,7 @@ public class KafkaBatchConsumer {
                         System.out.println("@@@@@@@@@@@@@@@@@@@");
                         continue;
                     }
+                    //过滤时间格式
                     LocalDateTime dateTime = dateToLocalDate(alarmMessage.getEventTime());
                     if (null == dateTime) {
                         System.out.println("////////////////////////");
@@ -249,8 +254,28 @@ public class KafkaBatchConsumer {
                         System.out.println("////////////////////////");
                         continue;
                     }
+                    //过滤非enodeB和Eutrancell
+//                    if (!("eNodeB".equalsIgnoreCase(alarmMessage.getLocateNeType())
+//                            ||"Eutrancell".equalsIgnoreCase(alarmMessage.getLocateNeType()))){
+//                        System.out.println("```````````````````````````````````````");
+//                        System.out.println(alarmMessage);
+//                        System.out.println("|---------------------------------------------------------------\n" +
+//                                "|group\ttopic\tpartition\toffset\ttimestamp\n" +
+//                                "|" + GROUP + "\t" + TOPIC + "\t" + record.partition() + "\t" + record.offset() + "\t" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(record.timestamp()) + "\n" +
+//                                "|---------------------------------------------------------------"
+//                        );
+//                        System.out.println("过滤非enodeB和Eutrancell！");
+//                        System.out.println(record.value());
+//                        System.out.println("```````````````````````````````````````");
+//                        continue;
+//                    }
                     alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(dateTime)));
                     alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(dateTime)));
+                    //***************update 新增小时字段入库 20210901
+                    alarmMessage.setDt_hour(HOUR_FORMATTER.format(Objects.requireNonNull(dateTime)));
+//                    System.out.println(alarmMessage);
+//                    System.out.println(alarmMessage.getDt_hour());
+                    //***************update 新增小时字段入库
                     Map<String, Object> map = getObjectToMap(alarmMessage);
                     dataList.add(map);
                     //*********************update 20210817 获取kafka消费数据json格式，转换入库
@@ -288,6 +313,7 @@ public class KafkaBatchConsumer {
             cols.add("AlarmCounty");
             cols.add("dt_day");
             cols.add("dt_month");
+            cols.add("dt_hour");
             //******************************update
 //            DBUtils.insertAllByList("alarm_message_tmp", dataList, cols);
             DBUtils.insertAllByList("ods_iscs_wireless_alarm", dataList, cols);

@@ -48,6 +48,7 @@ public class AlarmMessage {
     private String AlarmRegion;
     private String AlarmCounty;
 
+    private String dt_hour;
     private String dt_day;
     private String dt_month;
     private Date insertTime;
