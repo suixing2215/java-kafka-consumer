@@ -5,6 +5,8 @@ import com.alone.kafka.entry.Offset;
 import java.io.IOException;
 
 import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -233,7 +235,9 @@ public class DBUtils {
             connection.commit();
 
         } catch (SQLException e) {
+            e.printStackTrace();
             connection.rollback();
+            System.out.println( DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");

@@ -46,7 +46,7 @@ public class KafkaBatchConsumer {
             Properties prop = new Properties();
             // 加载配置文件, 调用load()方法
             // 类加载器加载资源时, 去固定的类路径下查找资源, 因此, 资源文件必须放到src目录才行
-            prop.load(DBUtils.class.getClassLoader().getResourceAsStream("kafka.properties"));
+            prop.load(KafkaBatchConsumer.class.getClassLoader().getResourceAsStream("kafka.properties"));
             // 从配置文件中获取数据为成员变量赋值
             ip = prop.getProperty("kafka.bootstrap-servers").trim();
             MAX_POLL = prop.getProperty("kafka.MAX_POLL").trim();
@@ -102,7 +102,9 @@ public class KafkaBatchConsumer {
                     );
                 }
 //                    consumer.commitAsync();
-                System.out.println("onPartitionsRevoked触发了");
+                System.out.println("日期：" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
+                        new Date(System.currentTimeMillis())
+                ) + "  onPartitionsRevoked触发了");
             }
 
             // rebalance之后读取之前的消费记录，继续消费
@@ -124,7 +126,9 @@ public class KafkaBatchConsumer {
                         consumer.seek(partition, offset + 1);
                     }
                 }
-                System.out.println("onPartitionsAssigned触发了");
+                System.out.println("日期：" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
+                        new Date(System.currentTimeMillis())
+                ) + "  onPartitionsAssigned触发了");
             }
         });
 
@@ -168,14 +172,14 @@ public class KafkaBatchConsumer {
                     //*******************************日志
                     //*********************update 20210817 获取kafka消费数据json格式，转换入库
                     //过滤message为空值的情况
-                    if (isEmpty(message)){
+                    if (isEmpty(message)) {
                         System.out.println("????????????????");
                         System.out.println("|---------------------------------------------------------------\n" +
                                 "|group\ttopic\tpartition\toffset\ttimestamp\n" +
                                 "|" + GROUP + "\t" + TOPIC + "\t" + record.partition() + "\t" + record.offset() + "\t" + new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(record.timestamp()) + "\n" +
                                 "|---------------------------------------------------------------"
                         );
-                        System.out.println("接收到的消息有空值！："+message+"前面是空值");
+                        System.out.println("接收到的消息有空值！：" + message + "前面是空值");
                         System.out.println("????????????????");
                         continue;
                     }
@@ -269,13 +273,17 @@ public class KafkaBatchConsumer {
 //                        System.out.println("```````````````````````````````````````");
 //                        continue;
 //                    }
-                    alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(dateTime)));
-                    alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(dateTime)));
+                    LocalDateTime now = LocalDateTime.now();
+                    alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(now)));
+                    alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(now)));
                     //***************update 新增小时字段入库 20210901
-                    alarmMessage.setDt_hour(HOUR_FORMATTER.format(Objects.requireNonNull(dateTime)));
+                    alarmMessage.setDt_hour(HOUR_FORMATTER.format(Objects.requireNonNull(now)));
 //                    System.out.println(alarmMessage);
 //                    System.out.println(alarmMessage.getDt_hour());
                     //***************update 新增小时字段入库
+                    //**********************update 20211010 新增 保存eventTime的年月日
+                    alarmMessage.setDt_event_day(DATE_TIME_FORMATTER.format(dateTime));
+                    //**********************update 新增 保存eventTime的年月日
                     Map<String, Object> map = getObjectToMap(alarmMessage);
                     dataList.add(map);
                     //*********************update 20210817 获取kafka消费数据json格式，转换入库
@@ -314,8 +322,8 @@ public class KafkaBatchConsumer {
             cols.add("dt_day");
             cols.add("dt_month");
             cols.add("dt_hour");
+            cols.add("dt_event_day");
             //******************************update
-//            DBUtils.insertAllByList("alarm_message_tmp", dataList, cols);
             DBUtils.insertAllByList("ods_iscs_wireless_alarm", dataList, cols);
             //******************************update
             for (Offset offset : offsets) {
@@ -329,6 +337,7 @@ public class KafkaBatchConsumer {
             }
         }
     }
+
     //校验json
     public static boolean isJsonValidate(String log) {
         try {
@@ -338,6 +347,7 @@ public class KafkaBatchConsumer {
             return false;
         }
     }
+
     //判断空值
     public static boolean isEmpty(Object object) {
         if (object == null) {
@@ -350,6 +360,10 @@ public class KafkaBatchConsumer {
             return (true);
         }
         return (false);
+    }
+
+    public static boolean isNotEmpty(Object object) {
+        return !isEmpty(object);
     }
 }
 

@@ -56,7 +56,12 @@
 <!--        </dependency>-->
 
     </dependencies>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd_HH_mm</maven.build.timestamp.format>
+    </properties>
     <build>
+        <finalName>olt-${project.version}-COMPANY</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -80,7 +85,8 @@
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.alone.kafka.consumer.KafkaBatchConsumer</mainClass>
+<!--                                    <mainClass>com.alone.kafka.consumer.KafkaBatchConsumer</mainClass>-->
+                                    <mainClass>com.alone.kafka.consumer.KafkaBatchConsumerOlt</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

@@ -20,38 +20,88 @@ import java.util.*;
  */
 public class ReadFiles {
     private final static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private final static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss");
     private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
+    private final static String PATH="C:\\Users\\Administrator\\Desktop\\";
 
+//    @SneakyThrows
+//    public static void main(String[] args) {
+//        List<String> list = txt2list("C:\\Users\\Administrator\\Desktop\\new 5.txt");
+//        List<Map<String, Object>> dataList = new ArrayList<>();
+//        assert list != null;
+//        if (!list.isEmpty()) {
+//            for (String s : list) {
+//                if (!isJsonValidate(s)) {
+//                    continue;
+//                }
+//                AlarmMessage alarmMessage = JSONObject.parseObject(s, AlarmMessage.class);
+//                if (null == (alarmMessage.getEventTime())) {
+//                    continue;
+//                }
+//                System.out.println("------------------------------------");
+//                LocalDateTime dateTime = dateToLocalDate(alarmMessage.getEventTime());
+//                if (null==dateTime){
+//                    continue;
+//                }
+//                alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(dateTime)));
+//                alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(dateTime)));
+//                System.out.println(alarmMessage.getDt_month());
+//                System.out.println(alarmMessage.getDt_day());
+//                Map<String, Object> map = getObjectToMap(alarmMessage);
+//                dataList.add(map);
+//            }
+//        }
+//        DBUtils.insertAllByList("alarm_message_tmp", dataList, getList());
+//    }
+
+    /**
+     * 读取txt文件
+     * @param args
+     */
     @SneakyThrows
     public static void main(String[] args) {
-        List<String> list = txt2list("C:\\Users\\Administrator\\Desktop\\new 5.txt");
-        List<Map<String, Object>> dataList = new ArrayList<>();
-        assert list != null;
-        if (!list.isEmpty()) {
-            for (String s : list) {
-                if (!isJsonValidate(s)) {
-                    continue;
-                }
-                AlarmMessage alarmMessage = JSONObject.parseObject(s, AlarmMessage.class);
-                if (null == (alarmMessage.getEventTime())) {
-                    continue;
-                }
-                System.out.println("------------------------------------");
-                LocalDateTime dateTime = dateToLocalDate(alarmMessage.getEventTime());
-                if (null==dateTime){
-                    continue;
-                }
-                alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(dateTime)));
-                alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(dateTime)));
-                System.out.println(alarmMessage.getDt_month());
-                System.out.println(alarmMessage.getDt_day());
-                Map<String, Object> map = getObjectToMap(alarmMessage);
-                dataList.add(map);
+//        while (true){
+            List<String> list = txt2list("C:\\Users\\Administrator\\Desktop\\test.txt");
+            List<String> data=new ArrayList<>();
+//            if (list==null){continue;}
+            for (String s:list) {
+                String temp = s.replaceAll("\\^\\#\\$\\^", "\\$");
+                System.out.println(temp);
+                data.add(temp);
             }
-        }
-        DBUtils.insertAllByList("alarm_message_tmp", dataList, getList());
+            LocalDateTime localDateTime=LocalDateTime.now();
+            StringBuffer sb=new StringBuffer();
+//            sb.append(PATH).append(DATE_TIME_FORMATTER.format(localDateTime));
+            sb.append(PATH).append("hhhhhh").append(".txt");
+            list2txt(data,sb.toString());
+//            Thread.sleep(10000);
+//        }
     }
 
+    /**
+     * 保存list到txt
+     * @param list 集合
+     */
+    public static void list2txt(List<String> list,String path){
+        try{
+//            File outFile1 = new File("E:/Test.txt");
+            File outFile1 = new File(path);
+            Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile1,true), "utf-8"), 10240);
+            for (int i = 0; i < list.size(); i++) {
+                out.write(list.get(i) + "\r\n");
+            }
+            out.flush();
+            out.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 从txt读取list
+     * @param path 路径
+     * @return 返回集合
+     */
     public static List<String> txt2list(String path) {
         List<String> list = new ArrayList<>();
         File file = new File(path);
