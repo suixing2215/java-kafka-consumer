@@ -2,13 +2,13 @@ package com.alone.kafka.consumer;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.WeekFields;
 import java.util.*;
-
-import com.alone.kafka.entry.AlarmMessage;
+import java.util.concurrent.atomic.AtomicInteger;
 import com.alone.kafka.entry.Offset;
-import com.alone.kafka.entry.OltMessage;
 import com.alone.kafka.utils.DBUtils;
 import com.alone.kafka.utils.MapUtils;
 import lombok.SneakyThrows;
@@ -38,6 +38,11 @@ public class KafkaBatchConsumerOlt {
      */
 //    private static String GROUP = "test_second_group";
 //    private static String TOPIC = "test_second";
+
+    //**********************offset 保存数据表名 update 20211019
+    private final static String TABLE="offset_management";
+//    private final static String TABLE="offset";
+    //**********************offset 保存数据表名 update 20211019
 
     private static KafkaConsumer<String, String> consumer;
     private static String ip;
@@ -97,7 +102,7 @@ public class KafkaBatchConsumerOlt {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    DBUtils.update("replace into offset values(?,?,?,?,?)",
+                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)",
                             new Offset(
                                     GROUP,
                                     TOPIC,
@@ -119,7 +124,7 @@ public class KafkaBatchConsumerOlt {
                 for (TopicPartition partition : partitions) {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
-                            "select sub_topic_partition_offset from offset where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+                            "select sub_topic_partition_offset from "+TABLE+" where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
                             //                            "select untiloffset from offset_manager where groupid=? and topic=? and partition=?",
                             GROUP,
                             TOPIC,
@@ -235,8 +240,15 @@ public class KafkaBatchConsumerOlt {
                                 //*******************update 20211011 新增告警发生时间-保存到日
                                 map.put("dt_event_day", DATE_FORMATTER.format(dateTime));
                                 //*******************update 20211011 新增告警发生时间-保存到日
+                                //*******************update 20211014 新增告警发生时间-保存当年多少周
+                                map.put("dt_event_week",getWeek(eventTime));
+                                //*******************update 20211014 新增告警发生时间-保存当年多少周
                             }
                         }
+                        //********************update20211019 ProjectName 切割字符串，获取用户数量 ProjectUserNum
+                        String projectName = (String) map.get("ProjectName");
+                        map.put("ProjectUserNum",getProjectUserNum(projectName));
+                        //********************update20211019 ProjectName 切割字符串，获取用户数量 ProjectUserNum
                         String nmsAlarmId = (String) map.get("NmsAlarmId");
                         String alarmStatus = (String) map.get("AlarmStatus");
                         if ("".equalsIgnoreCase(nmsAlarmId) && "1".equalsIgnoreCase(alarmStatus)) {
@@ -270,7 +282,12 @@ public class KafkaBatchConsumerOlt {
                 DBUtils.insertAllByList("ods_iscs_olt_alarm", dataList, cols);
                 //******************************update
                 for (Offset offset : offsets) {
-                    DBUtils.update("replace into offset values(?,?,?,?,?)", offset);
+                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)", offset);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
                 offsets.clear();
                 try {
@@ -280,7 +297,7 @@ public class KafkaBatchConsumerOlt {
                 }
             }
         } catch (Exception e) {
-            System.out.println(TIME_FORMATTER.format(LocalDateTime.now()));
+            System.out.println("有问题的时间："+TIME_FORMATTER.format(LocalDateTime.now()));
             e.printStackTrace();
         }
     }
@@ -307,6 +324,7 @@ public class KafkaBatchConsumerOlt {
         cols.add("LocateNeStatus");
         cols.add("ProjectNo");
         cols.add("ProjectName");
+        cols.add("ProjectUserNum");
         cols.add("ProjectStartTime");
         cols.add("ProjectEndTime");
         cols.add("LocateInfo");
@@ -348,10 +366,38 @@ public class KafkaBatchConsumerOlt {
         cols.add("SheetNo");
         cols.add("AlarmMemo");
         cols.add("dt_event_day");
+        cols.add("dt_event_week");
         cols.add("dt_day");
         cols.add("dt_month");
         cols.add("dt_hour");
         return cols;
+    }
+
+    public static Integer getWeek(String date){
+        LocalDate localDate = LocalDate.parse(date, TIME_FORMATTER);
+        WeekFields weekFields=WeekFields.ISO;
+        int i = localDate.get(weekFields.weekOfYear());
+        AtomicInteger atomicInteger=new AtomicInteger();
+        atomicInteger.set(i);
+        int j = atomicInteger.addAndGet(1);
+//        System.out.println(i+1+"---------i");
+//        System.out.println(j+"***---------i");
+//        int b = localDate.get(weekFields.weekBasedYear());
+//        System.out.println(b+"---------i");
+//        int c = localDate.get(weekFields.weekOfWeekBasedYear());
+//        System.out.println(c+"---------i");
+        
+        return j;
+    }
+
+    public static int getProjectUserNum(String projectName){
+//        String s="影响ONU数量:98 $C类";
+        if (isEmpty(projectName)){
+            return -1;
+        }
+        String s1 = projectName.split(":")[1];
+        String s2 = s1.split("\\$")[0].trim();
+        return Integer.parseInt(s2);
     }
 }
 

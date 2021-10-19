@@ -237,7 +237,7 @@ public class DBUtils {
         } catch (SQLException e) {
             e.printStackTrace();
             connection.rollback();
-            System.out.println( DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
+            System.out.println("数据回滚时间："+DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");

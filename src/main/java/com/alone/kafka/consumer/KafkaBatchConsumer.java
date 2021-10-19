@@ -27,13 +27,17 @@ public class KafkaBatchConsumer {
 
 
     private static Properties properties = null;
-    // private static String group = "mysql_offset";
-//    private static String group = "alarm_test";
+
+    /**
+     * 线上topic和group
+     */
     private final static String GROUP = "kafka-dop-group-first";
-    //    private static String topic = "first";
     private final static String TOPIC = "province-share-heb-wuxian234g-dop";
-    //    private static String topic = "test_second";
-//    private static String topic = "edgenode_student4";
+
+    //**********************offset 保存数据表名 update 20211019
+    private final static String TABLE="offset_management";
+    //**********************offset 保存数据表名 update 20211019
+
     private static KafkaConsumer<String, String> consumer;
     private static String ip;
     private static String MAX_POLL;
@@ -91,7 +95,7 @@ public class KafkaBatchConsumer {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    DBUtils.update("replace into offset values(?,?,?,?,?)",
+                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)",
                             new Offset(
                                     GROUP,
                                     TOPIC,
@@ -113,7 +117,7 @@ public class KafkaBatchConsumer {
                 for (TopicPartition partition : partitions) {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
-                            "select sub_topic_partition_offset from offset where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+                            "select sub_topic_partition_offset from "+TABLE+" where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
                             GROUP,
                             TOPIC,
                             subtopicpartitionid
@@ -326,12 +330,27 @@ public class KafkaBatchConsumer {
             //******************************update
             DBUtils.insertAllByList("ods_iscs_wireless_alarm", dataList, cols);
             //******************************update
+            //********************************************日志
+//            System.out.println("^^^^&&&&&&");
+//            System.out.println(offsets);
+//            System.out.println("^^^^&&&&&&");
+            //********************************************日志
             for (Offset offset : offsets) {
-                DBUtils.update("replace into offset values(?,?,?,?,?)", offset);
+                //********************************************日志
+//                System.out.println("------------------");
+//                System.out.println(offset);
+//                System.out.println("------------------");
+                //********************************************日志
+                DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)", offset);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
             offsets.clear();
             try {
-                Thread.sleep(5000);
+                Thread.sleep(13000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
