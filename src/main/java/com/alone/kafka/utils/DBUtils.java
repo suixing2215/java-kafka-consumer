@@ -138,6 +138,49 @@ public class DBUtils {
     }
 
     /**
+     * 根据特定消费者组，主题，分区，批量更新偏移量
+     *
+     * @param offsets
+     */
+    public static void updateList(String sql, List<Offset> offsets) {
+        PreparedStatement preparedStatement = null;
+        Connection connection = null;
+        try {
+            connection = getConn();
+//            int i = 0;
+            for (Offset offset : offsets) {
+//                System.out.println(i+"======================");
+//                i += 1;
+//                System.out.println(offset);
+//                System.out.println("-------------------------------------------------------------------------------------");
+                preparedStatement = getPstmt(connection, sql);
+                bindParam(preparedStatement,
+                        offset.getConsumerGroup(),
+                        offset.getSubTopic(),
+                        offset.getSubTopicPartitionId(),
+                        offset.getSubTopicPartitionOffset(),
+                        offset.getTimestamp()
+                );
+                try {
+                    preparedStatement.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    try {
+                        connection.rollback();
+                    } catch (SQLException exception) {
+                        exception.printStackTrace();
+                        System.out.println("数据回滚时间：" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            close(null, preparedStatement, connection);
+        }
+    }
+
+    /**
      * 根据特定消费者组，主题，分区，更新偏移量
      *
      * @param offset
@@ -221,7 +264,7 @@ public class DBUtils {
 //                        else {
 //                            colValue = colValue == null ? "" : colValue;
 //                            preparedStatement.setString(i + 1, String.valueOf(colValue));
-                            preparedStatement.setObject(i + 1, colValue);
+                        preparedStatement.setObject(i + 1, colValue);
 //                        }
                     } catch (Exception e) {
                         preparedStatement.setTimestamp(i + 1, null);
@@ -237,7 +280,7 @@ public class DBUtils {
         } catch (SQLException e) {
             e.printStackTrace();
             connection.rollback();
-            System.out.println("数据回滚时间："+DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
+            System.out.println("数据回滚时间：" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");

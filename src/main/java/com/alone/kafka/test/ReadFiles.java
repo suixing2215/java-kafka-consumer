@@ -179,14 +179,14 @@ public class ReadFiles {
         return cols;
     }
 
-    public static boolean isJsonValidate(String log) {
-        try {
-            JSON.parse(log);
-            return true;
-        } catch (JSONException e) {
-            return false;
-        }
-    }
+//    public static boolean isJsonValidate(String log) {
+//        try {
+//            JSON.parse(log);
+//            return true;
+//        } catch (JSONException e) {
+//            return false;
+//        }
+//    }
 
     /**
      *  Date 转化成 LocalDateTime

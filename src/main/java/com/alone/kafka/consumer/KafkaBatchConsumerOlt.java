@@ -1,12 +1,14 @@
 package com.alone.kafka.consumer;
 
 import java.io.IOException;
+import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.alone.kafka.entry.Offset;
 import com.alone.kafka.utils.DBUtils;
@@ -16,10 +18,10 @@ import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import static com.alone.kafka.consumer.KafkaBatchConsumer.isEmpty;
-import static com.alone.kafka.consumer.KafkaBatchConsumer.isNotEmpty;
 import static com.alone.kafka.test.ReadFiles.dateToLocalDate;
 import static com.alone.kafka.test.ReadFiles.getObjectToMap;
+import static com.alone.kafka.utils.DBUtils.getConn;
+import static com.alone.kafka.utils.oConvertUtils.*;
 
 /**
  * @author Administrator
@@ -34,10 +36,15 @@ public class KafkaBatchConsumerOlt {
     private final static String TOPIC = "province-share-heb-banms-asiainfo";
     private final static String GROUP = "kafka-dop-group-olt";
     /**
-     * 测试
+     * 单分区测试
      */
 //    private static String GROUP = "test_second_group";
 //    private static String TOPIC = "test_second";
+    /**
+     * 多分区测试
+     */
+//    private static String GROUP = "mysql_offset";
+//    private static String TOPIC = "my_test";
 
     //**********************offset 保存数据表名 update 20211019
     private final static String TABLE="offset_management";
@@ -60,7 +67,7 @@ public class KafkaBatchConsumerOlt {
             prop.load(KafkaBatchConsumerOlt.class.getClassLoader().getResourceAsStream("kafka.properties"));
             // 从配置文件中获取数据为成员变量赋值
             ip = prop.getProperty("kafka.bootstrap-servers").trim();
-            MAX_POLL = prop.getProperty("kafka.MAX_POLL").trim();
+            MAX_POLL = prop.getProperty("kafka.OLT_MAX_POLL").trim();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -76,7 +83,6 @@ public class KafkaBatchConsumerOlt {
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP);
         // 关闭自动提交offset
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-//            properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50);
         properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, MAX_POLL);
 
         // 1.创建一个消费者
@@ -145,7 +151,7 @@ public class KafkaBatchConsumerOlt {
         });
         try {
             while (true) {
-                ConsumerRecords<String, String> records = consumer.poll(5000);
+                ConsumerRecords<String, String> records = consumer.poll(3000);
                 if (records.isEmpty()) {
                     continue;
                 }
@@ -163,7 +169,29 @@ public class KafkaBatchConsumerOlt {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
+                    //*******************update offset存放方式
+                    int flag=0;
+                    if (listIsEmpty(offsets)){
+                        offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
+                    }else {
+                        for (Offset o : offsets) {
+                            if (isEmpty(o)) {
+                                continue;
+                            }
+                            if (record.partition()==o.getSubTopicPartitionId()){
+                                o.setSubTopicPartitionOffset(record.offset());
+                                o.setTimestamp(date);
+                                flag=-1;
+                                break;
+                            }
+                        }
+                        if (flag==0){
+                            offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
+                        }
+                    }
+                    //*******************update offset存放方式
+                    //这里有问题，上面已优化，下面弃用
+//                    offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
                     //******************************************日志
 //                    System.out.println("|---------------------------------------------------------------\n" +
 //                            "|group\ttopic\tpartition\toffset\ttimestamp\n" +
@@ -277,21 +305,59 @@ public class KafkaBatchConsumerOlt {
                 }
 //                System.out.println(dataList);
                 //获取数据库入参字段
-                List<String> cols = getList();
+                List<String> cols = getOLTList();
                 //******************************update
                 DBUtils.insertAllByList("ods_iscs_olt_alarm", dataList, cols);
                 //******************************update
-                for (Offset offset : offsets) {
-                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)", offset);
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+//                for (Offset offset : offsets) {
+//                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)", offset);
+////                    try {
+////                        Thread.sleep(50);
+////                    } catch (InterruptedException e) {
+////                        e.printStackTrace();
+////                    }
+//                }
+
+                //*******************************************************update db
+/*                PreparedStatement preparedStatement = null;
+                Connection connection = null;
+                try {
+                    connection = getConn();
+                    String offsetSql="replace into "+TABLE+" values(?,?,?,?,?)";
+//                    int i=0;
+                    for (Offset offset : offsets) {
+//                        System.out.println(i);
+//                        i+=1;
+                        preparedStatement = getPstmt(connection,offsetSql);
+                        bindParam(preparedStatement,
+                                offset.getConsumerGroup(),
+                                offset.getSubTopic(),
+                                offset.getSubTopicPartitionId(),
+                                offset.getSubTopicPartitionOffset(),
+                                offset.getTimestamp()
+                        );
+                        try {
+                            preparedStatement.executeUpdate();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            try {
+                                connection.rollback();
+                            } catch (SQLException exception) {
+                                exception.printStackTrace();
+                                System.out.println("数据回滚时间："+DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
+                            }
+                        }
                     }
-                }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    close(null, preparedStatement, connection);
+                }*/
+                DBUtils.updateList("replace into "+TABLE+" values(?,?,?,?,?)",offsets);
+                //*******************************************************update db
                 offsets.clear();
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(2000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -300,104 +366,6 @@ public class KafkaBatchConsumerOlt {
             System.out.println("有问题的时间："+TIME_FORMATTER.format(LocalDateTime.now()));
             e.printStackTrace();
         }
-    }
-
-    public static List<String> getList() {
-        List<String> cols = new ArrayList<>();
-        cols.add("ProvinceID");
-        cols.add("IntVersion");
-        cols.add("MsgSerial");
-        cols.add("AlarmUniqueId");
-        cols.add("ClearId");
-        cols.add("StandardFlag");
-        cols.add("SubAlarmType");
-        cols.add("NeId");
-        cols.add("LocateNeName");
-        cols.add("LocateNeType");
-        cols.add("NeName");
-        cols.add("NeAlias");
-        cols.add("EquipmentClass");
-        cols.add("NeIp");
-        cols.add("SystemName");
-        cols.add("Vendor");
-        cols.add("Version");
-        cols.add("LocateNeStatus");
-        cols.add("ProjectNo");
-        cols.add("ProjectName");
-        cols.add("ProjectUserNum");
-        cols.add("ProjectStartTime");
-        cols.add("ProjectEndTime");
-        cols.add("LocateInfo");
-        cols.add("EventTime");
-        cols.add("CancelTime");
-        cols.add("DalTime");
-        cols.add("VendorAlarmType");
-        cols.add("VendorSeverity");
-        cols.add("AlarmSeverity");
-        cols.add("VendorAlarmId");
-        cols.add("NmsAlarmId");
-        cols.add("AlarmStatus");
-        cols.add("AckFlag");
-        cols.add("AckTime");
-        cols.add("AckUser");
-        cols.add("AlarmTitle");
-        cols.add("StandardAlarmName");
-        cols.add("ProbableCauseTxt");
-        cols.add("AlarmText");
-        cols.add("CircuitNo");
-        cols.add("PortRate");
-        cols.add("Specialty");
-        cols.add("BusinessSystem");
-        cols.add("AlarmLogicClass");
-        cols.add("AlarmLogicSubClass");
-        cols.add("EffectOnEquipment");
-        cols.add("EffectOnBusiness");
-        cols.add("NmsAlarmType");
-        cols.add("SendGroupFlag");
-        cols.add("RelatedFlag");
-        cols.add("AlarmProvince");
-        cols.add("AlarmRegion");
-        cols.add("AlarmCounty");
-        cols.add("Site");
-        cols.add("AlarmActCount");
-        cols.add("CorrelateAlarmFlag");
-        cols.add("SheetSendStatus");
-        cols.add("SheetStatus");
-        cols.add("SheetNo");
-        cols.add("AlarmMemo");
-        cols.add("dt_event_day");
-        cols.add("dt_event_week");
-        cols.add("dt_day");
-        cols.add("dt_month");
-        cols.add("dt_hour");
-        return cols;
-    }
-
-    public static Integer getWeek(String date){
-        LocalDate localDate = LocalDate.parse(date, TIME_FORMATTER);
-        WeekFields weekFields=WeekFields.ISO;
-        int i = localDate.get(weekFields.weekOfYear());
-        AtomicInteger atomicInteger=new AtomicInteger();
-        atomicInteger.set(i);
-        int j = atomicInteger.addAndGet(1);
-//        System.out.println(i+1+"---------i");
-//        System.out.println(j+"***---------i");
-//        int b = localDate.get(weekFields.weekBasedYear());
-//        System.out.println(b+"---------i");
-//        int c = localDate.get(weekFields.weekOfWeekBasedYear());
-//        System.out.println(c+"---------i");
-        
-        return j;
-    }
-
-    public static int getProjectUserNum(String projectName){
-//        String s="影响ONU数量:98 $C类";
-        if (isEmpty(projectName)){
-            return -1;
-        }
-        String s1 = projectName.split(":")[1];
-        String s2 = s1.split("\\$")[0].trim();
-        return Integer.parseInt(s2);
     }
 }
 
