@@ -40,8 +40,12 @@ public class KafkaBatchConsumer {
     private final static String TOPIC = "province-share-heb-wuxian234g-dop";
 
     //**********************offset 保存数据表名 update 20211019
-    private final static String TABLE = "offset_management";
+    private final static String OFFSET_TABLE = "offset_management";
     //**********************offset 保存数据表名 update 20211019
+    //测试
+//    private static String GROUP = "test_second_group";
+//    private static String TOPIC = "test_second";
+//    private final static String OFFSET_TABLE = "offset";
 
     private static KafkaConsumer<String, String> consumer;
     private static String ip;
@@ -50,6 +54,7 @@ public class KafkaBatchConsumer {
     private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
     private final static DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH");
     private final static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final static DateTimeFormatter YEAR_FORMATTER = DateTimeFormatter.ofPattern("yyyy");
 
     static {
         try {
@@ -101,7 +106,7 @@ public class KafkaBatchConsumer {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    DBUtils.update("replace into " + TABLE + " values(?,?,?,?,?)",
+                    DBUtils.update("replace into " + OFFSET_TABLE + " values(?,?,?,?,?)",
                             new Offset(
                                     GROUP,
                                     TOPIC,
@@ -123,7 +128,7 @@ public class KafkaBatchConsumer {
                 for (TopicPartition partition : partitions) {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
-                            "select sub_topic_partition_offset from " + TABLE + " where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+                            "select sub_topic_partition_offset from " + OFFSET_TABLE + " where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
                             GROUP,
                             TOPIC,
                             subtopicpartitionid
@@ -306,16 +311,24 @@ public class KafkaBatchConsumer {
 //                        continue;
 //                    }
                         LocalDateTime now = LocalDateTime.now();
-                        alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(now)));
+                        alarmMessage.setDt_month(MONTH_FORMATTER.format(Objects.requireNonNull(dateTime)));
                         alarmMessage.setDt_day(DATE_TIME_FORMATTER.format(Objects.requireNonNull(now)));
                         //***************update 新增小时字段入库 20210901
-                        alarmMessage.setDt_hour(HOUR_FORMATTER.format(Objects.requireNonNull(now)));
+                        //***************update 新增小时字段入库 20211027 修改为eventTime
+                        alarmMessage.setDt_hour(HOUR_FORMATTER.format(dateTime));
 //                    System.out.println(alarmMessage);
 //                    System.out.println(alarmMessage.getDt_hour());
                         //***************update 新增小时字段入库
                         //**********************update 20211010 新增 保存eventTime的年月日
                         alarmMessage.setDt_event_day(DATE_TIME_FORMATTER.format(dateTime));
                         //**********************update 新增 保存eventTime的年月日
+                        //*********************update 20211025 新增week字段
+                        alarmMessage.setDt_event_week(getWeek(TIME_FORMATTER.format(dateTime)));
+                        //************************update 20211108 新增年字段，配合周使用
+                        alarmMessage.setDt_event_year(YEAR_FORMATTER.format(dateTime));
+                        //************************update 20211108 新增年字段，配合周使用
+//                        System.out.println(alarmMessage);
+                        //*********************update 20211025 新增week
                         Map<String, Object> map = getObjectToMap(alarmMessage);
                         dataList.add(map);
                         //*********************update 20210817 获取kafka消费数据json格式，转换入库
@@ -330,13 +343,18 @@ public class KafkaBatchConsumer {
 //            System.out.println("^^^^&&&&&&");
 //            System.out.println(offsets);
 //            System.out.println("^^^^&&&&&&");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 //********************************************日志
                 //************************************************update db
-                DBUtils.updateList("replace into "+TABLE+" values(?,?,?,?,?)",offsets);
+                DBUtils.updateList("replace into "+OFFSET_TABLE+" values(?,?,?,?,?)",offsets);
                 //*******************************************************update db
                 offsets.clear();
                 try {
-                    Thread.sleep(3000);
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

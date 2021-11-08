@@ -52,6 +52,8 @@ public class AlarmMessage {
     private String dt_day;
     private String dt_month;
     private String dt_event_day;
+    private Integer dt_event_week;
+    private String dt_event_year;
     private Date insertTime;
     private Date updateTime;
 }

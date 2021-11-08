@@ -47,8 +47,8 @@ public class KafkaBatchConsumerOlt {
 //    private static String TOPIC = "my_test";
 
     //**********************offset 保存数据表名 update 20211019
-    private final static String TABLE="offset_management";
-//    private final static String TABLE="offset";
+    private final static String OFFSET_TABLE="offset_management";
+//    private final static String OFFSET_TABLE="offset";
     //**********************offset 保存数据表名 update 20211019
 
     private static KafkaConsumer<String, String> consumer;
@@ -108,7 +108,7 @@ public class KafkaBatchConsumerOlt {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)",
+                    DBUtils.update("replace into "+OFFSET_TABLE+" values(?,?,?,?,?)",
                             new Offset(
                                     GROUP,
                                     TOPIC,
@@ -130,7 +130,7 @@ public class KafkaBatchConsumerOlt {
                 for (TopicPartition partition : partitions) {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
-                            "select sub_topic_partition_offset from "+TABLE+" where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+                            "select sub_topic_partition_offset from "+OFFSET_TABLE+" where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
                             //                            "select untiloffset from offset_manager where groupid=? and topic=? and partition=?",
                             GROUP,
                             TOPIC,
@@ -160,10 +160,7 @@ public class KafkaBatchConsumerOlt {
 //                        new Date(System.currentTimeMillis())
 //                ));
                 //******************************************日志
-                //            List<AlarmMessage> list = new ArrayList<>();
                 List<Map<String, Object>> dataList = new ArrayList<>();
-                //            List<Map<String, Object>> data = new ArrayList<>();
-                //            System.getProperty()
                 List<Offset> offsets = new ArrayList<Offset>();
                 for (ConsumerRecord<String, String> record : records) {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
@@ -295,11 +292,6 @@ public class KafkaBatchConsumerOlt {
 //                        System.out.println(map);
 //                        System.out.println("-------------------------------------------------------------------------接受到的数据end");
                         //***************************************日志
-                        //                    OltMessage oltMessage = (OltMessage) MapUtils.mapToObject(map, OltMessage.class);
-                        //                    Map<String, Object> toMap = getObjectToMap(oltMessage);
-                        //                    data.add(toMap);
-                        //                System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-                        //                System.out.println(alarmMessage);
                     }
 
                 }
@@ -308,52 +300,8 @@ public class KafkaBatchConsumerOlt {
                 List<String> cols = getOLTList();
                 //******************************update
                 DBUtils.insertAllByList("ods_iscs_olt_alarm", dataList, cols);
-                //******************************update
-//                for (Offset offset : offsets) {
-//                    DBUtils.update("replace into "+TABLE+" values(?,?,?,?,?)", offset);
-////                    try {
-////                        Thread.sleep(50);
-////                    } catch (InterruptedException e) {
-////                        e.printStackTrace();
-////                    }
-//                }
-
                 //*******************************************************update db
-/*                PreparedStatement preparedStatement = null;
-                Connection connection = null;
-                try {
-                    connection = getConn();
-                    String offsetSql="replace into "+TABLE+" values(?,?,?,?,?)";
-//                    int i=0;
-                    for (Offset offset : offsets) {
-//                        System.out.println(i);
-//                        i+=1;
-                        preparedStatement = getPstmt(connection,offsetSql);
-                        bindParam(preparedStatement,
-                                offset.getConsumerGroup(),
-                                offset.getSubTopic(),
-                                offset.getSubTopicPartitionId(),
-                                offset.getSubTopicPartitionOffset(),
-                                offset.getTimestamp()
-                        );
-                        try {
-                            preparedStatement.executeUpdate();
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                            try {
-                                connection.rollback();
-                            } catch (SQLException exception) {
-                                exception.printStackTrace();
-                                System.out.println("数据回滚时间："+DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    close(null, preparedStatement, connection);
-                }*/
-                DBUtils.updateList("replace into "+TABLE+" values(?,?,?,?,?)",offsets);
+                DBUtils.updateList("replace into "+OFFSET_TABLE+" values(?,?,?,?,?)",offsets);
                 //*******************************************************update db
                 offsets.clear();
                 try {

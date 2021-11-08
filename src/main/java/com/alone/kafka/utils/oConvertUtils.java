@@ -102,13 +102,6 @@ public class oConvertUtils {
         AtomicInteger atomicInteger=new AtomicInteger();
         atomicInteger.set(i);
         int j = atomicInteger.addAndGet(1);
-//        System.out.println(i+1+"---------i");
-//        System.out.println(j+"***---------i");
-//        int b = localDate.get(weekFields.weekBasedYear());
-//        System.out.println(b+"---------i");
-//        int c = localDate.get(weekFields.weekOfWeekBasedYear());
-//        System.out.println(c+"---------i");
-
         return j;
     }
 
@@ -156,6 +149,8 @@ public class oConvertUtils {
         cols.add("dt_month");
         cols.add("dt_hour");
         cols.add("dt_event_day");
+        cols.add("dt_event_week");
+        cols.add("dt_event_year");
         return cols;
     }
 
