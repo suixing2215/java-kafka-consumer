@@ -10,17 +10,16 @@ import java.time.temporal.WeekFields;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import com.alone.kafka.entry.Offset;
 import com.alone.kafka.utils.DBUtils;
 import com.alone.kafka.utils.MapUtils;
+import com.alone.kafka.utils.oConvertUtils;
 import lombok.SneakyThrows;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import static com.alone.kafka.test.ReadFiles.dateToLocalDate;
-import static com.alone.kafka.test.ReadFiles.getObjectToMap;
-import static com.alone.kafka.utils.DBUtils.getConn;
 import static com.alone.kafka.utils.oConvertUtils.*;
 
 /**
@@ -48,7 +47,7 @@ public class KafkaBatchConsumerOlt {
 
     //**********************offset 保存数据表名 update 20211019
     private final static String OFFSET_TABLE="offset_management";
-//    private final static String OFFSET_TABLE="offset";
+//    private final static String OFFSET_TABLE = "offset";
     //**********************offset 保存数据表名 update 20211019
 
     private static KafkaConsumer<String, String> consumer;
@@ -58,6 +57,10 @@ public class KafkaBatchConsumerOlt {
     private final static DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
     private final static DateTimeFormatter HOUR_FORMATTER = DateTimeFormatter.ofPattern("HH");
     private final static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final static DateTimeFormatter YEAR_FORMATTER = DateTimeFormatter.ofPattern("yyyy");
+    private final static String CLASSIFICATION1 = "310003";
+    private final static String CLASSIFICATION2 = "310004";
+    private final static String CLASSIFICATION3 = "310006";
 
     static {
         try {
@@ -108,7 +111,7 @@ public class KafkaBatchConsumerOlt {
                     String date = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss").format(
                             new Date(System.currentTimeMillis())
                     );
-                    DBUtils.update("replace into "+OFFSET_TABLE+" values(?,?,?,?,?)",
+                    DBUtils.update("replace into " + OFFSET_TABLE + " values(?,?,?,?,?)",
                             new Offset(
                                     GROUP,
                                     TOPIC,
@@ -130,7 +133,7 @@ public class KafkaBatchConsumerOlt {
                 for (TopicPartition partition : partitions) {
                     int subtopicpartitionid = partition.partition();
                     long offset = DBUtils.queryOffset(
-                            "select sub_topic_partition_offset from "+OFFSET_TABLE+" where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
+                            "select sub_topic_partition_offset from " + OFFSET_TABLE + " where consumer_group=? and sub_topic=? and sub_topic_partition_id=?",
                             //                            "select untiloffset from offset_manager where groupid=? and topic=? and partition=?",
                             GROUP,
                             TOPIC,
@@ -167,22 +170,22 @@ public class KafkaBatchConsumerOlt {
                             new Date(System.currentTimeMillis())
                     );
                     //*******************update offset存放方式
-                    int flag=0;
-                    if (listIsEmpty(offsets)){
+                    int flag = 0;
+                    if (listIsEmpty(offsets)) {
                         offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
-                    }else {
+                    } else {
                         for (Offset o : offsets) {
                             if (isEmpty(o)) {
                                 continue;
                             }
-                            if (record.partition()==o.getSubTopicPartitionId()){
+                            if (record.partition() == o.getSubTopicPartitionId()) {
                                 o.setSubTopicPartitionOffset(record.offset());
                                 o.setTimestamp(date);
-                                flag=-1;
+                                flag = -1;
                                 break;
                             }
                         }
-                        if (flag==0){
+                        if (flag == 0) {
                             offsets.add(new Offset(GROUP, TOPIC, record.partition(), record.offset(), date));
                         }
                     }
@@ -266,27 +269,36 @@ public class KafkaBatchConsumerOlt {
                                 map.put("dt_event_day", DATE_FORMATTER.format(dateTime));
                                 //*******************update 20211011 新增告警发生时间-保存到日
                                 //*******************update 20211014 新增告警发生时间-保存当年多少周
-                                map.put("dt_event_week",getWeek(eventTime));
+                                map.put("dt_event_week", getWeek(eventTime));
                                 //*******************update 20211014 新增告警发生时间-保存当年多少周
+                                map.put("dt_month", MONTH_FORMATTER.format(dateTime));
+                                map.put("dt_hour", HOUR_FORMATTER.format(Objects.requireNonNull(dateTime)));
+                                //****************************update 20211109 新增年份字段
+                                map.put("dt_event_year", YEAR_FORMATTER.format(dateTime));
                             }
                         }
                         //********************update20211019 ProjectName 切割字符串，获取用户数量 ProjectUserNum
                         String projectName = (String) map.get("ProjectName");
-                        map.put("ProjectUserNum",getProjectUserNum(projectName));
+                        map.put("ProjectUserNum", getProjectUserNum(projectName));
                         //********************update20211019 ProjectName 切割字符串，获取用户数量 ProjectUserNum
                         String nmsAlarmId = (String) map.get("NmsAlarmId");
                         String alarmStatus = (String) map.get("AlarmStatus");
-                        if ("".equalsIgnoreCase(nmsAlarmId) && "1".equalsIgnoreCase(alarmStatus)) {
+//                        System.out.println(map);
+//                        System.out.println("-----------------------------------");
+                        //********************************update 20211115 去除NmsAlarmId，非310003，310004，310006
+//                        if (("".equalsIgnoreCase(nmsAlarmId) && "1".equalsIgnoreCase(alarmStatus))
+//                                ||!(nmsAlarmId.equalsIgnoreCase(CLASSIFICATION1)
+//                                    ||nmsAlarmId.equalsIgnoreCase(CLASSIFICATION2)
+//                                    ||nmsAlarmId.equalsIgnoreCase(CLASSIFICATION3))) {
+                        if (!getOltVerify(nmsAlarmId, alarmStatus)) {
 //                            System.out.println("有问题！");
                             continue;
-                        } else {
-                            //手动记录日期
-                            LocalDateTime now = LocalDateTime.now();
-                            map.put("dt_day", DATE_FORMATTER.format(now));
-                            map.put("dt_month", MONTH_FORMATTER.format(now));
-                            map.put("dt_hour", HOUR_FORMATTER.format(Objects.requireNonNull(now)));
-                            dataList.add(map);
                         }
+                        //********************************update 20211115 去除NmsAlarmId，非310003，310004，310006
+                        //手动记录日期
+                        LocalDateTime now = LocalDateTime.now();
+                        map.put("dt_day", DATE_FORMATTER.format(now));
+                        dataList.add(map);
                         //***************************************日志
 //                        System.out.println("-------------------------------------------------------------------------接受到的数据start");
 //                        System.out.println(map);
@@ -295,13 +307,19 @@ public class KafkaBatchConsumerOlt {
                     }
 
                 }
+                //保存历史数据
 //                System.out.println(dataList);
                 //获取数据库入参字段
                 List<String> cols = getOLTList();
                 //******************************update
                 DBUtils.insertAllByList("ods_iscs_olt_alarm", dataList, cols);
                 //*******************************************************update db
-                DBUtils.updateList("replace into "+OFFSET_TABLE+" values(?,?,?,?,?)",offsets);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                DBUtils.updateList("replace into " + OFFSET_TABLE + " values(?,?,?,?,?)", offsets);
                 //*******************************************************update db
                 offsets.clear();
                 try {
@@ -311,9 +329,24 @@ public class KafkaBatchConsumerOlt {
                 }
             }
         } catch (Exception e) {
-            System.out.println("有问题的时间："+TIME_FORMATTER.format(LocalDateTime.now()));
+            System.out.println("有问题的时间：" + TIME_FORMATTER.format(LocalDateTime.now()));
             e.printStackTrace();
         }
+    }
+
+    private static boolean getOltVerify(String nmsAlarmId, String alarmStatus) {
+        if (oConvertUtils.isEmpty(nmsAlarmId)){
+            if ("0".equalsIgnoreCase(alarmStatus)){
+                return true;
+            }else {
+                return false;
+            }
+        }else if (nmsAlarmId.equalsIgnoreCase(CLASSIFICATION1)
+                || nmsAlarmId.equalsIgnoreCase(CLASSIFICATION2)
+                || nmsAlarmId.equalsIgnoreCase(CLASSIFICATION3)){
+            return true;
+        }
+        return false;
     }
 }
 

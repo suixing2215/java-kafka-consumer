@@ -21,8 +21,6 @@ import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import static com.alone.kafka.test.ReadFiles.*;
-import static com.alone.kafka.utils.DBUtils.*;
 import static com.alone.kafka.utils.oConvertUtils.*;
 
 /**
@@ -38,10 +36,7 @@ public class KafkaBatchConsumer {
      */
     private final static String GROUP = "kafka-dop-group-first";
     private final static String TOPIC = "province-share-heb-wuxian234g-dop";
-
-    //**********************offset 保存数据表名 update 20211019
     private final static String OFFSET_TABLE = "offset_management";
-    //**********************offset 保存数据表名 update 20211019
     //测试
 //    private static String GROUP = "test_second_group";
 //    private static String TOPIC = "test_second";

@@ -3,12 +3,14 @@ package com.alone.kafka.utils;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONException;
 
+import java.lang.reflect.Field;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -92,6 +94,7 @@ public class oConvertUtils {
         cols.add("dt_day");
         cols.add("dt_month");
         cols.add("dt_hour");
+        cols.add("dt_event_year");
         return cols;
     }
 
@@ -203,5 +206,43 @@ public class oConvertUtils {
      */
     public static boolean listIsNotEmpty(Collection list) {
         return !listIsEmpty(list);
+    }
+
+    /**
+     *  Date 转化成 LocalDateTime
+     */
+    public static LocalDateTime dateToLocalDate(Date date) {
+        try {
+            Instant instant = date.toInstant();
+            ZoneId zoneId = ZoneId.systemDefault();
+            return instant.atZone(zoneId).toLocalDateTime();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Object转Map
+     */
+    public static Map<String, Object> getObjectToMap(Object obj) throws IllegalAccessException {
+        Map<String, Object> map = new LinkedHashMap<String, Object>();
+        Class<?> clazz = obj.getClass();
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            String fieldName = field.getName();
+            if ("insertTime".equals(fieldName)){
+                continue;
+            }
+            if ("updateTime".equals(fieldName)){
+                continue;
+            }
+            Object value = field.get(obj);
+            if (value == null) {
+                value = "";
+            }
+            map.put(fieldName, value);
+        }
+        return map;
     }
 }

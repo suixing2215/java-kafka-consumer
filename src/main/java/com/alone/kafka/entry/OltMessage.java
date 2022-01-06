@@ -36,7 +36,7 @@ public class OltMessage {
     private String ProjectStartTime;
     private String ProjectEndTime;
     private String LocateInfo;
-    private Date EventTime;
+    private String EventTime;
     private String CancelTime;
     private String DalTime;
     private String VendorAlarmType;
@@ -73,9 +73,11 @@ public class OltMessage {
     private String SheetStatus;
     private String SheetNo;
     private String AlarmMemo;
+    private String dt_hour;
+    private String dt_event_day;
+    private String dt_event_week;
+    private String dt_event_year;
     private String dt_day;
     private String dt_month;
-    private String dt_hour;
     private Date insertTime;
-    private Date updateTime;
 }

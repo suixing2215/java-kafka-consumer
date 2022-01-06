@@ -18,13 +18,14 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.47</version>
+<!--            <version>5.1.47</version>-->
+            <version>8.0.17</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.mybatis</groupId>-->
-<!--            <artifactId>mybatis</artifactId>-->
-<!--            <version>3.5.7</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.1.16</version>
+        </dependency>
 
         <dependency>
             <groupId>com.alibaba</groupId>
@@ -54,14 +55,20 @@
 <!--            <artifactId>clickhouse-jdbc</artifactId>-->
 <!--            <version>0.1.52</version>-->
 <!--        </dependency>-->
-
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>yyyy-MM-dd_HH_mm</maven.build.timestamp.format>
     </properties>
     <build>
-        <finalName>olt-${project.version}-COMPANY</finalName>
+        <finalName>olt-kafka-${project.version}</finalName>
+<!--        <finalName>wireless-kafka-${project.version}</finalName>-->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

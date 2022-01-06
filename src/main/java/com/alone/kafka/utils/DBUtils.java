@@ -14,35 +14,37 @@ import java.util.Properties;
 /**
  * JDBC操作工具类, 提供注册驱动, 连接, 发送器, 动态绑定参数, 关闭资源等方法
  * jdbc连接参数的提取, 使用Properties进行优化(软编码)
+ *
+ * 使用druid的连接池获取数据库连接
  */
 public class DBUtils {
 
-    private static String driver;
-    private static String url;
-    private static String user;
-    private static String password;
-
-    static {
-        // 借助静态代码块保证配置文件只读取一次就行
-        // 创建Properties对象
-        Properties prop = new Properties();
-        try {
-            // 加载配置文件, 调用load()方法
-            // 类加载器加载资源时, 去固定的类路径下查找资源, 因此, 资源文件必须放到src目录才行
-            prop.load(DBUtils.class.getClassLoader().getResourceAsStream("db.properties"));
-            // 从配置文件中获取数据为成员变量赋值
-            driver = prop.getProperty("db.driver").trim();
-            url = prop.getProperty("db.url").trim();
-            user = prop.getProperty("db.user").trim();
-            password = prop.getProperty("db.password").trim();
-            // 加载驱动
-            Class.forName(driver);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
+//    private static String driver;
+//    private static String url;
+//    private static String user;
+//    private static String password;
+//
+//    static {
+//        // 借助静态代码块保证配置文件只读取一次就行
+//        // 创建Properties对象
+//        Properties prop = new Properties();
+//        try {
+//            // 加载配置文件, 调用load()方法
+//            // 类加载器加载资源时, 去固定的类路径下查找资源, 因此, 资源文件必须放到src目录才行
+//            prop.load(DBUtils.class.getClassLoader().getResourceAsStream("db.properties"));
+//            // 从配置文件中获取数据为成员变量赋值
+//            driver = prop.getProperty("db.driver").trim();
+//            url = prop.getProperty("db.url").trim();
+//            user = prop.getProperty("db.user").trim();
+//            password = prop.getProperty("db.password").trim();
+//            // 加载驱动
+//            Class.forName(driver);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     /**
      * 动态绑定参数
@@ -102,11 +104,13 @@ public class DBUtils {
     public static Connection getConn() {
         Connection conn = null;
         try {
-            conn = DriverManager.getConnection(url, user, password);
+//            conn = DriverManager.getConnection(url, user, password);
+            conn = DataSourceUtil.getConnection();
+            return conn;
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return conn;
+        return null;
     }
 
     /**
@@ -246,26 +250,11 @@ public class DBUtils {
 //            System.out.println(insertStr);
             preparedStatement = connection.prepareStatement(insertStr);
             connection.setAutoCommit(false);
-
             for (Map<String, Object> data : dataList) {
                 for (int i = 0; i < cols.size(); i++) {
                     Object colValue = data.get(cols.get(i));
                     try {
-                        //******************************update
-//                        if ("MsgSerial".equals(cols.get(i))
-//                                || "AlarmStatus".equals(cols.get(i))
-//                                || "NmsAlarmType".equals(cols.get(i))) {
-//                            if ("".equals(colValue)) {
-//                                colValue = null;
-//                            }
-//                            preparedStatement.setObject(i + 1, colValue);
-//                        }
-                        //******************************update
-//                        else {
-//                            colValue = colValue == null ? "" : colValue;
-//                            preparedStatement.setString(i + 1, String.valueOf(colValue));
                         preparedStatement.setObject(i + 1, colValue);
-//                        }
                     } catch (Exception e) {
                         preparedStatement.setTimestamp(i + 1, null);
                     }
@@ -276,25 +265,23 @@ public class DBUtils {
             preparedStatement.executeBatch();
             preparedStatement.clearBatch();
             connection.commit();
-
         } catch (SQLException e) {
             e.printStackTrace();
             connection.rollback();
             System.out.println("数据回滚时间：" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()));
+//            String sqlState = e.getSQLState();
+//            // 这个08S01就是这个异常的sql状态。单独处理手动重新链接就可以了。
+//            if ("08S01".equals(sqlState) || "40001".equals(sqlState))
+//            {
+//                c--;
+//            } else {
+//                c = 0;
+//            }
         } catch (Exception e) {
             e.printStackTrace();
             throw new Exception("执行存入数据失败");
         } finally {
-            try {
-                if (preparedStatement != null) {
-                    preparedStatement.close();
-                }
-                if (connection != null) {
-                    connection.close();
-                }
-            } catch (SQLException e) {
-                throw new Exception("关闭连接失败");
-            }
+            close(null, preparedStatement, connection);
         }
 
     }
@@ -307,28 +294,29 @@ public class DBUtils {
      * @param stmt
      * @param conn
      */
-    public static void close(ResultSet rs, Statement stmt, Connection conn) {
-        try {
-            if (rs != null) {
-                rs.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        try {
-            if (stmt != null) {
-                stmt.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        try {
-            if (conn != null) {
-                conn.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public static void close(ResultSet rs, PreparedStatement stmt, Connection conn) {
+//        try {
+//            if (rs != null) {
+//                rs.close();
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//        try {
+//            if (stmt != null) {
+//                stmt.close();
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//        try {
+//            if (conn != null) {
+//                conn.close();
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+        DataSourceUtil.closeResource(rs,stmt,conn);
     }
 
 }
